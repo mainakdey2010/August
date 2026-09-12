@@ -50,8 +50,7 @@ gcloud storage buckets create "gs://${GCS_BUCKET}" \
   --uniform-bucket-level-access 2>/dev/null || echo "  (already exists)"
 
 # Lifecycle: delete objects older than 30 days (CSV exports are transient)
-gcloud storage buckets update "gs://${GCS_BUCKET}" \
-  --lifecycle-file=- <<'EOF'
+cat > /tmp/sera-lifecycle.json <<'EOF'
 {
   "rule": [{
     "action": {"type": "Delete"},
@@ -59,6 +58,9 @@ gcloud storage buckets update "gs://${GCS_BUCKET}" \
   }]
 }
 EOF
+
+gcloud storage buckets update "gs://${GCS_BUCKET}" \
+  --lifecycle-file=/tmp/sera-lifecycle.json
 
 # ── BigQuery ──────────────────────────────────────────────────────────────────
 echo "==> Creating BigQuery dataset: ${BQ_DATASET}"

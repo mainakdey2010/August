@@ -56,7 +56,7 @@ gcloud run deploy "sera-worker-ingest-${ENV}" \
   --add-cloudsql-instances="${SQL_CONN}" \
   --set-env-vars="ENV=${ENV},GCP_PROJECT=${PROJECT_ID},BQ_DATASET=${BQ_DATASET},GCS_BUCKET=${GCS_BUCKET},GEE_MAX_CONCURRENT=8" \
   --set-secrets="REDIS_URL=sera-redis-url:latest,DATABASE_URL=sera-db-url:latest" \
-  --min-instances=1 \
+  --min-instances=0 \
   --max-instances=2 \
   --memory=1Gi \
   --cpu=2 \
@@ -76,7 +76,7 @@ gcloud run deploy "sera-worker-agents-${ENV}" \
   --add-cloudsql-instances="${SQL_CONN}" \
   --set-env-vars="ENV=${ENV},GCP_PROJECT=${PROJECT_ID},BQ_DATASET=${BQ_DATASET}" \
   --set-secrets="REDIS_URL=sera-redis-url:latest,DATABASE_URL=sera-db-url:latest" \
-  --min-instances=1 \
+  --min-instances=0 \
   --max-instances=2 \
   --memory=1Gi \
   --cpu=1 \

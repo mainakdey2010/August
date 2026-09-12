@@ -7,7 +7,7 @@ set -euo pipefail
 
 ENV="${1:-dev}"
 PROJECT_ID="${GCP_PROJECT:-your-project-id}"
-REGION="europe-west1"
+REGION="asia-south1"
 IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/sera/sera:latest"
 BQ_DATASET="sera_analytics_${ENV}"
 GCS_BUCKET="sera-rasters-${ENV}"

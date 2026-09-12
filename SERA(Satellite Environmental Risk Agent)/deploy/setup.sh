@@ -12,7 +12,7 @@ set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 PROJECT_ID="${GCP_PROJECT:-your-project-id}"
-REGION="europe-west1"       # pick closest to your data
+REGION="asia-south1"       # pick closest to your data
 ENV="dev"
 BQ_DATASET="sera_analytics_dev"
 GCS_BUCKET="sera-rasters-${ENV}"
@@ -63,7 +63,7 @@ EOF
 # ── BigQuery ──────────────────────────────────────────────────────────────────
 echo "==> Creating BigQuery dataset: ${BQ_DATASET}"
 bq mk --dataset \
-  --location=EU \
+  --location=asia-south1 \
   --description="SERA analytics dev" \
   "${PROJECT_ID}:${BQ_DATASET}" 2>/dev/null || echo "  (already exists)"
 

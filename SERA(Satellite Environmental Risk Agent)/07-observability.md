@@ -81,7 +81,7 @@ SELECT
   r.labels.region_id,
   SUM(total_bytes_billed) / POW(1024, 4) AS tb_billed,
   SUM(total_bytes_billed) / POW(1024, 4) * 5.0 AS estimated_eur  -- $5/TB on-demand
-FROM `region-eu`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
+FROM `region-asia-south1`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
 CROSS JOIN UNNEST(labels) AS labels
 WHERE
   labels.key = 'workflow_name'

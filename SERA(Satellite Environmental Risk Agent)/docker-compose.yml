@@ -1,0 +1,99 @@
+# Local development stack.
+# Simulates the full Cloud Run + Cloud SQL + Redis deployment locally.
+# Does NOT include GEE (requires real GCP credentials regardless).
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose exec api python -c "import ee; ee.Initialize()"
+
+version: "3.9"
+
+services:
+
+  # ── Redis (broker + DLQ cache) ────────────────────────────────────────────
+  # In production: Upstash free tier (no Memorystore — too expensive)
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── PostgreSQL + PostGIS ──────────────────────────────────────────────────
+  # In production: Cloud SQL db-f1-micro (~$7/mo) or Neon free tier
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB:       sera
+      POSTGRES_USER:     sera
+      POSTGRES_PASSWORD: sera
+    ports: ["5432:5432"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./sql/postgis/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+      - ./sql/postgis/002_webhooks.sql:/docker-entrypoint-initdb.d/002_webhooks.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sera"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── FastAPI ───────────────────────────────────────────────────────────────
+  api:
+    build: .
+    command: uvicorn sera.api.main:app --host 0.0.0.0 --port 8080 --reload
+    ports: ["8080:8080"]
+    env_file: .env.local
+    volumes:
+      - ./src:/app/src     # live reload
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/gcp-creds.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /gcp-creds.json
+    depends_on:
+      redis:    {condition: service_healthy}
+      postgres: {condition: service_healthy}
+
+  # ── Celery: ingest queue ──────────────────────────────────────────────────
+  worker-ingest:
+    build: .
+    command: celery -A sera.tasks.celery_app worker -Q ingest --concurrency=4 --hostname=ingest@%h --loglevel=info
+    env_file: .env.local
+    volumes:
+      - ./src:/app/src
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/gcp-creds.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /gcp-creds.json
+    depends_on:
+      redis:    {condition: service_healthy}
+      postgres: {condition: service_healthy}
+
+  # ── Celery: agents queue ──────────────────────────────────────────────────
+  worker-agents:
+    build: .
+    command: celery -A sera.tasks.celery_app worker -Q agents --concurrency=2 --hostname=agents@%h --loglevel=info
+    env_file: .env.local
+    volumes:
+      - ./src:/app/src
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-~/.config/gcloud/application_default_credentials.json}:/gcp-creds.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /gcp-creds.json
+    depends_on:
+      redis:    {condition: service_healthy}
+      postgres: {condition: service_healthy}
+
+  # ── Celery beat (scheduler) ───────────────────────────────────────────────
+  beat:
+    build: .
+    command: celery -A sera.tasks.celery_app beat --loglevel=info
+    env_file: .env.local
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      redis: {condition: service_healthy}
+
+volumes:
+  redis_data:
+  pg_data:

@@ -1,0 +1,150 @@
+# SERA — Monitoring Region Configuration Template
+# Copy this file, fill in all required fields, submit via POST /v1/regions
+# Fields marked REQUIRED must be set. OPTIONAL fields show defaults.
+# v1.0 | 2026-09-07
+
+# ─── Identity ────────────────────────────────────────────────────────────────
+
+region_id: ""                     # REQUIRED — unique, stable, kebab-case slug
+                                  # e.g. "emea-energy-grid-north"
+                                  # Once set, do not change — used as FK in all tables
+
+display_name: ""                  # REQUIRED — human-readable name
+asset_tier: ""                    # REQUIRED — critical | high | medium | low
+
+
+# ─── Geometry ─────────────────────────────────────────────────────────────────
+
+geometry:
+  # Option A: inline GeoJSON polygon
+  type: Polygon
+  coordinates: []                 # GeoJSON coordinate array [[lon,lat], ...]
+
+  # Option B: reference to BigQuery asset table
+  # coordinates_ref: "bq://{project}.asset_registry.boundaries/{region_id}"
+
+  buffer_km: 5.0                  # OPTIONAL — proximity alert zone around boundary
+                                  # default: 5.0
+
+
+# ─── Monitoring Schedule ──────────────────────────────────────────────────────
+
+monitoring:
+  interval_days: 7                # OPTIONAL — how often to run a scheduled scan
+                                  # default: 7
+                                  # minimum: 1 (daily), maximum: 30
+
+  baseline_lookback_years: 10     # OPTIONAL — historical window for baseline stats
+                                  # default: 10, max: 40
+                                  # Longer = more stable baseline; shorter = faster initial build
+
+  baseline_update_schedule: "0 2 * * 0"   # OPTIONAL — cron for weekly baseline refresh
+                                           # default: Sunday 02:00 UTC
+
+  cloud_cover_threshold: 0.70     # OPTIONAL — max acceptable cloud cover fraction for optical
+                                  # Above this: attempt SAR fallback, else log gap
+                                  # default: 0.70
+
+  gee_window_days: 5              # OPTIONAL — search ±N days from scan_date for best image
+                                  # default: 5
+
+
+# ─── Spectral Indices ─────────────────────────────────────────────────────────
+#
+# Weights must sum to 1.0.
+# threshold_stddev: z-score magnitude that triggers anomaly flag.
+# All index_id values must exist in config/index-registry.yaml.
+
+indices:
+  - id: NDVI
+    enabled: true
+    weight: 0.35
+    threshold_stddev: 2.0
+    anomaly_detection: z-score    # OPTIONAL — override registry default
+
+  - id: NDRE
+    enabled: true                 # Set false if S2 is chronically unavailable in region
+    weight: 0.20
+    threshold_stddev: 1.8
+
+  - id: LST
+    enabled: true
+    weight: 0.25
+    threshold_stddev: 2.5
+
+  - id: NBR
+    enabled: true
+    weight: 0.20
+    threshold_stddev: 2.0
+
+  # Additional indices — uncomment and adjust weights (must rebalance to sum to 1.0)
+  # - id: NDWI
+  #   enabled: false
+  #   weight: 0.0
+  #   threshold_stddev: 2.0
+
+  # - id: BSI
+  #   enabled: false
+  #   weight: 0.0
+  #   threshold_stddev: 2.0
+
+  # - id: SAR_RVI
+  #   enabled: false              # Enable only if region has frequent cloud cover
+  #   weight: 0.0
+  #   threshold_stddev: 1.5
+
+
+# ─── Risk Scoring ─────────────────────────────────────────────────────────────
+
+risk_scoring:
+  fusion_method: weighted_sum     # OPTIONAL — weighted_sum | max | percentile_rank
+                                  # weighted_sum: standard for most regions
+                                  # max: use highest single-index signal (fire-prone regions)
+                                  # percentile_rank: non-Gaussian distributions
+
+  data_gap_penalty_per_index: 0.05  # OPTIONAL — penalty added to score per missing index
+                                    # default: 0.05 (5% per gap)
+
+  minimum_indices_required: 2     # OPTIONAL — skip agent chain if fewer computable
+                                  # default: 2; set to 1 for data-sparse regions
+
+  risk_tiers:                     # OPTIONAL — override default score → tier mapping
+    CRITICAL: 0.75
+    HIGH: 0.50
+    MEDIUM: 0.25
+    LOW: 0.01
+    NONE: 0.00
+
+
+# ─── Notifications ────────────────────────────────────────────────────────────
+
+notifications:
+  - channel: webhook
+    # URL stored in Secret Manager — never inline here
+    url_secret: "projects/{project}/secrets/sera-webhook-{region_id}"
+    events: [CRITICAL, HIGH]      # Risk tiers that trigger this channel
+    active: true
+
+  - channel: email
+    recipients_secret: "projects/{project}/secrets/sera-email-{region_id}"
+    events: [CRITICAL]
+    active: true
+
+
+# ─── Labels ───────────────────────────────────────────────────────────────────
+# Applied to all BQ jobs and GEE exports for this region.
+# env is injected at runtime — do not set here.
+
+labels:
+  region_id: ""                   # REQUIRED — must match region_id above
+  asset_tier: ""                  # REQUIRED — must match asset_tier above
+  workflow_name: sera-monitoring  # REQUIRED — do not change
+
+
+# ─── Notes ────────────────────────────────────────────────────────────────────
+# Free-text field for context — stored in monitoring_regions.config_yaml
+# but not used by the processing pipeline.
+
+notes: ""
+# Example: "Northern EMEA energy transmission grid. Primary hazards: drought stress,
+# wildfire risk. NDRE enabled — S2 coverage is reliable in this region."

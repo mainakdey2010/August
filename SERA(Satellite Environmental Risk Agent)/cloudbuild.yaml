@@ -1,0 +1,19 @@
+steps:
+  - id: build-sera
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - asia-south1-docker.pkg.dev/$PROJECT_ID/sera/sera:manual
+      - -t
+      - asia-south1-docker.pkg.dev/$PROJECT_ID/sera/sera:latest
+      - .
+
+images:
+  - asia-south1-docker.pkg.dev/$PROJECT_ID/sera/sera:manual
+  - asia-south1-docker.pkg.dev/$PROJECT_ID/sera/sera:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

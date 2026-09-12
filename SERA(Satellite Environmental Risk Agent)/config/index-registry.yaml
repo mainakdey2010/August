@@ -1,0 +1,192 @@
+# SERA — Spectral Index Registry
+# Canonical definition of all supported indices.
+# Add new indices here; do not hardcode band combinations in application code.
+# v1.0 | 2026-09-07
+
+indices:
+
+  NDVI:
+    name: Normalized Difference Vegetation Index
+    description: General vegetation health and density
+    formula_human: "(NIR - Red) / (NIR + Red)"
+    formula_gee: "(b('NIR') - b('Red')) / (b('NIR') + b('Red'))"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1      # Landsat as secondary optical source
+      sar_proxy: SAR_RVI   # All-weather SAR proxy when optical unavailable
+    bands:
+      S2_SR: { NIR: B8, Red: B4 }
+      L8_T1: { NIR: B5, Red: B4 }
+    valid_range: [-1.0, 1.0]
+    healthy_range: [0.3, 0.9]     # Overridable per region config
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      decline: "Vegetation loss — stress, drought, fire, deforestation"
+      spike: "Unusual greening — flooding, irrigation anomaly"
+    note: "Primary vegetation health signal. NDRE detects stress 2-3 weeks earlier."
+
+  NDRE:
+    name: Normalized Difference Red Edge
+    description: Early canopy stress detection — precedes NDVI signal by 2-3 weeks
+    formula_human: "(NIR - RedEdge) / (NIR + RedEdge)"
+    formula_gee: "(b('NIR') - b('RE')) / (b('NIR') + b('RE'))"
+    sensors:
+      primary: S2_SR
+      fallback: null        # No Landsat equivalent — red edge band not available
+      sar_proxy: null
+    bands:
+      S2_SR: { NIR: B8A, RE: B5 }
+    valid_range: [-1.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      decline: "Chlorophyll stress — drought onset, pest, disease, nutrient deficiency"
+      spike: "Recovery or fertilisation"
+    note: "Sentinel-2 only. Disable for regions where S2 is consistently unavailable."
+
+  NDWI:
+    name: Normalized Difference Water Index
+    description: Surface water extent and canopy water content
+    formula_human: "(Green - NIR) / (Green + NIR)"
+    formula_gee: "(b('Green') - b('NIR')) / (b('Green') + b('NIR'))"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1
+      sar_proxy: null
+    bands:
+      S2_SR: { Green: B3, NIR: B8 }
+      L8_T1: { Green: B3, NIR: B5 }
+    valid_range: [-1.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      spike: "Flooding or abnormal water accumulation"
+      decline: "Drought, water table drop"
+
+  MNDWI:
+    name: Modified Normalized Difference Water Index
+    description: Open water mapping — reduced soil and vegetation noise vs. NDWI
+    formula_human: "(Green - SWIR1) / (Green + SWIR1)"
+    formula_gee: "(b('Green') - b('SWIR1')) / (b('Green') + b('SWIR1'))"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1
+      sar_proxy: null
+    bands:
+      S2_SR: { Green: B3, SWIR1: B11 }
+      L8_T1: { Green: B3, SWIR1: B6 }
+    valid_range: [-1.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      spike: "Urban flooding, rapid inundation"
+      decline: "Drought, reservoir drawdown"
+    note: "Prefer MNDWI over NDWI for urban and semi-arid regions."
+
+  NBR:
+    name: Normalized Burn Ratio
+    description: Post-fire burn severity assessment
+    formula_human: "(NIR - SWIR2) / (NIR + SWIR2)"
+    formula_gee: "(b('NIR') - b('SWIR2')) / (b('NIR') + b('SWIR2'))"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1
+      sar_proxy: null
+    bands:
+      S2_SR: { NIR: B8A, SWIR2: B12 }
+      L8_T1: { NIR: B5,  SWIR2: B7 }
+    valid_range: [-1.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: false    # Fire events are not seasonal — compare vs. absolute baseline
+    cloud_sensitive: true
+    interpretation:
+      decline: "Post-fire burn scar — severity proportional to magnitude"
+      spike: "Unusual pre-fire vegetation moisture"
+
+  dNBR:
+    name: Differenced Normalized Burn Ratio
+    description: Burn severity by comparing pre- and post-fire NBR
+    type: derived                 # Derived from NBR — requires two scans
+    requires: [NBR]
+    formula_human: "NBR_prefire - NBR_postfire"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1
+      sar_proxy: null
+    anomaly_detection: threshold  # Fixed thresholds: 0.1=low, 0.27=moderate, 0.66=high, 1.3=extreme
+    seasonal_adjustment: false
+    cloud_sensitive: true
+    interpretation:
+      positive: "Burn severity — higher value = more severe"
+
+  BSI:
+    name: Bare Soil Index
+    description: Exposed/degraded soil, deforestation, construction activity
+    formula_human: "((SWIR1 + Red) - (NIR + Blue)) / ((SWIR1 + Red) + (NIR + Blue))"
+    formula_gee: "((b('SWIR1') + b('Red')) - (b('NIR') + b('Blue'))) / ((b('SWIR1') + b('Red')) + (b('NIR') + b('Blue')))"
+    sensors:
+      primary: S2_SR
+      fallback: L8_T1
+      sar_proxy: null
+    bands:
+      S2_SR: { SWIR1: B11, Red: B4, NIR: B8, Blue: B2 }
+      L8_T1: { SWIR1: B6,  Red: B4, NIR: B5, Blue: B2 }
+    valid_range: [-1.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      spike: "Land clearing, erosion, soil degradation, construction"
+      decline: "Vegetation recovery"
+
+  LST:
+    name: Land Surface Temperature
+    description: Surface thermal anomaly — drought stress, urban heat, fire precursor
+    formula_human: "Brightness temperature corrected for emissivity"
+    formula_gee: "Landsat thermal band with emissivity correction applied"
+    sensors:
+      primary: L8_T1            # Landsat only — no Sentinel thermal band
+      fallback: L9_T1
+      sar_proxy: null
+    bands:
+      L8_T1: { Thermal: B10 }
+      L9_T1: { Thermal: B10 }
+    units: degrees_celsius
+    valid_range: [-20.0, 80.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: true
+    interpretation:
+      spike: "Heat stress, urban heat island expansion, pre-fire conditions"
+      decline: "Unusual cooling — flooding, irrigation, cloud shadow artefact"
+    note: >
+      16-day revisit on Landsat limits temporal resolution. Best combined with
+      NDVI as a co-signal (NDVI decline + LST spike = drought/heat-stress pattern).
+
+  SAR_RVI:
+    name: Radar Vegetation Index (Sentinel-1 SAR)
+    description: All-weather vegetation structure proxy — SAR fallback for optical indices
+    formula_human: "4 * VH / (VV + VH)"
+    formula_gee: "ee.Image(4).multiply(img.select('VH')).divide(img.select('VV').add(img.select('VH')))"
+    sensors:
+      primary: S1_GRD
+      fallback: null
+      sar_proxy: null             # SAR_RVI IS the proxy — no further fallback
+    bands:
+      S1_GRD: { VV: VV, VH: VH }
+    valid_range: [0.0, 1.0]
+    anomaly_detection: z-score
+    seasonal_adjustment: true
+    cloud_sensitive: false        # All-weather — SAR penetrates cloud cover
+    interpretation:
+      decline: "Vegetation structure loss — deforestation, crop failure, fire aftermath"
+      spike: "Vegetation regrowth, increased canopy moisture"
+    note: >
+      Used as a proxy for NDVI and NDRE when optical sensors are unavailable.
+      Sensitivity differs: SAR_RVI responds to canopy structure, NDVI to chlorophyll.
+      Co-interpret with caution — a low SAR_RVI reading does not map 1:1 to low NDVI.

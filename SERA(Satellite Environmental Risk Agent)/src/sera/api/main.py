@@ -194,9 +194,10 @@ async def health() -> dict[str, Any]:
     from sera.gee.availability import SENSOR_CATALOG
     try:
         import ee
-        ee.Initialize()
+        ee.Initialize(project=os.environ.get("GCP_PROJECT") or bq.project)
         components["gee"] = "healthy"
     except Exception:
+        log.exception("GEE initialization failed")
         components["gee"] = "unhealthy"
 
     overall = "healthy" if all(v == "healthy" for v in components.values()) else "degraded"

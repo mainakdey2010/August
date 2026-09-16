@@ -83,7 +83,7 @@ def run_scan(
     Dispatches one GEE export task per computable index.
     Returns summary dict written into scan_log.
     """
-    ee.Initialize()
+    ee.Initialize(project=os.environ.get("GCP_PROJECT", "august-505217"))
     rc    = _redis()
     bq    = _bq()
     scan_dt = date.fromisoformat(scan_date)
@@ -298,3 +298,4 @@ def _avg_cloud_cover(availability, computable):
         for _, sid in computable
     ]
     return sum(covers) / len(covers) if covers else 0.0
+

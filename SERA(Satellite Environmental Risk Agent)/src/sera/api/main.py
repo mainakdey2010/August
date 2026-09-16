@@ -238,13 +238,19 @@ async def register_region_endpoint(config: dict) -> dict[str, str]:
     )
 
     # Async: upload H3 cells as GEE asset (required before first scan can run)
-    from sera.tasks.baseline_tasks import upload_h3_asset_for_region
-    upload_h3_asset_for_region.delay(
-        region_id        = region_id,
-        region_geom_json = geom_json,
-    )
+    h3_status = "uploading"
+    try:
+        from sera.tasks.baseline_tasks import upload_h3_asset_for_region
+        upload_h3_asset_for_region.delay(
+            region_id        = region_id,
+            region_geom_json = geom_json,
+        )
+    except Exception as exc:
+        # Celery broker unavailable — region is registered; H3 upload needs a worker running
+        log.warning("H3 asset upload dispatch failed for %s: %s", region_id, exc)
+        h3_status = "pending_worker"
 
-    return {"region_id": region_id, "status": "registered", "h3_asset": "uploading"}
+    return {"region_id": region_id, "status": "registered", "h3_asset": h3_status}
 
 
 @app.post("/v1/webhooks", status_code=status.HTTP_201_CREATED)
@@ -348,3 +354,4 @@ def _count_by_tier(events: list[dict]) -> dict[str, int]:
         tier = e.get("risk_tier", "LOW")
         counts[tier] = counts.get(tier, 0) + 1
     return counts
+

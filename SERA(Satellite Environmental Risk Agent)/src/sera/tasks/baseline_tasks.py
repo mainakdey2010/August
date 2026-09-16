@@ -35,7 +35,7 @@ def upload_h3_asset_for_region(self, region_id: str, region_geom_json: dict) -> 
     Called once on region registration. Must complete before first scan can run.
     Returns GEE asset ID.
     """
-    ee.Initialize()
+    ee.Initialize(project=os.environ.get("GCP_PROJECT", "august-505217"))
     h3_fc    = region_geojson_to_h3_fc(region_geom_json, resolution=8)
     asset_id = upload_h3_cells_as_asset(h3_fc, region_id, ENV)
     log.info("H3 asset upload submitted region=%s asset=%s", region_id, asset_id)
@@ -64,7 +64,7 @@ def build_baseline_for_region(
     Called once on region registration per configured index.
     For very large regions (>50k H3 cells), see tiling note below.
     """
-    ee.Initialize()
+    ee.Initialize(project=os.environ.get("GCP_PROJECT", "august-505217"))
 
     region_geom = ee.Geometry(region_geom_json)
     h3_fc       = _load_or_build_h3_fc(region_id, region_geom_json)
@@ -211,3 +211,4 @@ def _load_active_region_configs(bq: bigquery.Client) -> list[dict]:
         }
         for r in rows
     ]
+

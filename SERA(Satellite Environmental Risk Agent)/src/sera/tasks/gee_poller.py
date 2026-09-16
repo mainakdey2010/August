@@ -52,7 +52,7 @@ def poll_active_tasks() -> dict[str, Any]:
     Beat task: check all in-flight GEE tasks, trigger downstream on completion.
     Returns summary for monitoring.
     """
-    ee.Initialize()
+    ee.Initialize(project=os.environ.get("GCP_PROJECT", "august-505217"))
     bq = _bq()
     rc = _redis()
 
@@ -284,3 +284,4 @@ def _release_slot(rc: redis_lib.Redis) -> None:
         rc.decr(GEE_SLOT_KEY)
     # Reset expiry to prevent permanent lock on unexpected states
     rc.expire(GEE_SLOT_KEY, GEE_SLOT_EXPIRY_S)
+

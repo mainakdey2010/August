@@ -13,12 +13,29 @@ Launch:
 from __future__ import annotations
 
 import os
+import re
 import ssl
+from urllib.parse import quote
 
 from celery import Celery
 from celery.schedules import crontab
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0").strip()
+
+def _safe_broker_url(url: str) -> str:
+    """
+    URL-encode the password in a redis(s):// URL.
+    Upstash tokens are base64 and contain +/= which confuse Kombu's URL parser,
+    causing it to fall back to the AMQP default transport.
+    """
+    url = url.strip()
+    m = re.match(r'^(rediss?://)([^:@]+):(.+?)@(.+)$', url)
+    if m:
+        scheme_slash, user, password, host = m.groups()
+        return f"{scheme_slash}{user}:{quote(password, safe='')}@{host}"
+    return url
+
+
+REDIS_URL = _safe_broker_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
 
 app = Celery(
     "sera",
@@ -33,7 +50,8 @@ app = Celery(
     ],
 )
 
-# Upstash uses TLS (rediss://). Kombu needs explicit SSL config.
+# Upstash uses TLS (rediss://). Kombu needs explicit SSL config — unlike redis-py,
+# it doesn't infer SSL from the scheme alone on all versions.
 if REDIS_URL.startswith("rediss://"):
     _ssl = {"ssl_cert_reqs": ssl.CERT_NONE}
     app.conf.broker_use_ssl        = _ssl
@@ -75,3 +93,4 @@ app.conf.update(
         },
     },
 )
+

@@ -62,7 +62,8 @@ def upload_h3_cells_as_asset(
     Persist H3 cells as a GEE Asset (once per region registration).
     Returns asset_id.
     """
-    asset_id = f"projects/sera-gee-{env}/assets/regions/{region_id}/h3_cells"
+    gcp_project = os.environ.get("GCP_PROJECT", "august-505217")
+    asset_id = f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}/h3_cells"
     task = ee.batch.Export.table.toAsset(
         collection=h3_fc,
         description=f"sera-h3cells-{region_id}",
@@ -74,7 +75,8 @@ def upload_h3_cells_as_asset(
 
 
 def load_h3_asset(region_id: str, env: str) -> ee.FeatureCollection:
-    asset_id = f"projects/sera-gee-{env}/assets/regions/{region_id}/h3_cells"
+    gcp_project = os.environ.get("GCP_PROJECT", "august-505217")
+    asset_id = f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}/h3_cells"
     return ee.FeatureCollection(asset_id)
 
 

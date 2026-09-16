@@ -75,14 +75,14 @@ resource "google_artifact_registry_repository" "sera" {
 
 # ── CI/CD triggers: IaC plan/apply + app build ───────────────────────────────
 
-module "cicd" {
-  source         = "./modules/cicd"
-  project_id     = var.project_id
-  region         = var.region
-  env            = var.env
-  branch         = var.git_branch
-  deploy_bucket  = "${var.project_id}_cloudbuild"
-}
+#module "cicd" {
+#  source         = "./modules/cicd"
+#  project_id     = var.project_id
+#  region         = var.region
+#  env            = var.env
+#  branch         = var.git_branch
+#  deploy_bucket  = "${var.project_id}_cloudbuild"
+#}
 
 # ── Cloud Run API service ─────────────────────────────────────────────────────
 
@@ -107,4 +107,5 @@ module "cloudrun" {
     module.cloudsql,
   ]
 }
+
 

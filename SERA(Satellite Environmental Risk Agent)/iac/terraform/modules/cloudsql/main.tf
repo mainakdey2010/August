@@ -15,7 +15,7 @@ resource "google_sql_database_instance" "sera" {
     }
 
     ip_configuration {
-      ipv4_enabled = false  # private IP only
+      ipv4_enabled = true
     }
   }
 

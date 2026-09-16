@@ -47,10 +47,15 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
+      }
+
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "1Gi"
         }
       }
     }
@@ -72,8 +77,6 @@ resource "google_cloud_run_v2_service" "api" {
 }
 
 # ── Celery ingest worker ──────────────────────────────────────────────────────
-# Runs with sa-sera-ingest-dev — EE, BQ, GCS, Cloud SQL, Secrets all via ADC.
-# No personal credentials, no SA keys. min_instance_count=1 so queue drains promptly.
 
 resource "google_cloud_run_v2_service" "ingest_worker" {
   project  = var.project_id
@@ -85,14 +88,10 @@ resource "google_cloud_run_v2_service" "ingest_worker" {
 
     containers {
       image   = var.image
-      command = ["celery"]
+      command = ["sh"]
       args    = [
-        "-A", "sera.tasks.celery_app",
-        "worker",
-        "-Q", "ingest",
-        "--concurrency=2",
-        "--hostname=ingest@%h",
-        "--loglevel=info",
+        "-c",
+        "python3 -m http.server 8080 & celery -A sera.tasks.celery_app worker -Q ingest --concurrency=2 --hostname=ingest@%h --loglevel=info",
       ]
 
       env {
@@ -159,9 +158,7 @@ resource "google_cloud_run_v2_service" "ingest_worker" {
   }
 }
 
-# ── IAM: public invoker for API only (not for worker) ────────────────────────
-# The ingest worker has NO invoker binding — it is not reachable via HTTP.
-# It pulls from the Redis queue. Cloud Run keeps it alive via min_instance_count=1.
+# ── IAM: public invoker for API only ─────────────────────────────────────────
 
 resource "google_cloud_run_v2_service_iam_member" "api_public_invoker" {
   project  = var.project_id

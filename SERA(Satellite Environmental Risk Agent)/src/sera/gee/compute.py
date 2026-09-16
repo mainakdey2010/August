@@ -64,6 +64,19 @@ def upload_h3_cells_as_asset(
     """
     gcp_project = os.environ.get("GCP_PROJECT", "august-505217")
     asset_id = f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}/h3_cells"
+
+    # GEE requires parent folders to exist before export
+    for folder in [
+        f"projects/{gcp_project}/assets/sera",
+        f"projects/{gcp_project}/assets/sera/{env}",
+        f"projects/{gcp_project}/assets/sera/{env}/regions",
+        f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}",
+    ]:
+        try:
+            ee.data.createAsset({"type": "FOLDER"}, folder)
+        except Exception:
+            pass  # already exists
+
     task = ee.batch.Export.table.toAsset(
         collection=h3_fc,
         description=f"sera-h3cells-{region_id}",

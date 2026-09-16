@@ -8,8 +8,8 @@ terraform {
   }
 
   # GCS backend — all config passed at init time, nothing hardcoded here.
-  # Dev:  terraform init -backend-config="bucket=<project>-tfstate" -backend-config="prefix=sera/dev"
-  # Prod: terraform init -backend-config="bucket=<project>-tfstate" -backend-config="prefix=sera/prod"
+  # Dev:  terraform init -backend-config="bucket=$(gcloud config get-value project)_cloudbuild" -backend-config="prefix=terraform-state/sera/dev"
+  # Prod: terraform init -backend-config="bucket=$(gcloud config get-value project)_cloudbuild" -backend-config="prefix=terraform-state/sera/prod"
   # Create the bucket once (see iac/terraform/backend-setup.sh).
   backend "gcs" {}
 }

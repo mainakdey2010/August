@@ -5,7 +5,10 @@
 # Usage:
 #   export TF_VAR_project_id=$(gcloud config get-value project)
 #   cd iac/terraform
-#   terraform init -backend-config="bucket=august-505217-tfstate"
+#   bash backend-setup.sh dev    # enable versioning on Cloud Build bucket (once)
+#   terraform init \
+#     -backend-config="bucket=$(gcloud config get-value project)_cloudbuild" \
+#     -backend-config="prefix=terraform-state/sera/dev"
 #   bash import.sh
 
 set -euo pipefail

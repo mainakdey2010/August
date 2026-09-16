@@ -13,10 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source
 COPY src/ src/
+COPY config/ config/
 
 ENV PYTHONPATH=/app/src
 
 # Default: API. Override CMD for worker variants.
 CMD ["uvicorn", "sera.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
 
 

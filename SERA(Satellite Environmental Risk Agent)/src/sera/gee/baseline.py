@@ -103,6 +103,20 @@ def build_baseline_in_gee(
 
     all_weeks_fc = ee.FeatureCollection(weeks.map(weekly_baseline_fc)).flatten()
 
+    # Rename GEE combined-reducer columns ({index_id}_mean etc.) to plain names
+    # so the BQ schema (mean, stddev, p10 ...) matches without per-index logic.
+    idx = index_id
+    all_weeks_fc = all_weeks_fc.map(lambda f: f.set({
+        "mean":         f.get(f"{idx}_mean"),
+        "stddev":       f.get(f"{idx}_stdDev"),
+        "p10":          f.get(f"{idx}_p10"),
+        "p25":          f.get(f"{idx}_p25"),
+        "p50":          f.get(f"{idx}_p50"),
+        "p75":          f.get(f"{idx}_p75"),
+        "p90":          f.get(f"{idx}_p90"),
+        "sample_count": f.get(f"{idx}_count"),
+    }))
+
     description = f"sera-baseline-{env}-{region_id}-{index_id}"
     export_prefix = f"sera/baselines/{region_id}/{index_id}/{baseline_start_year}-{baseline_end_year}"
 
@@ -114,12 +128,9 @@ def build_baseline_in_gee(
         fileFormat="CSV",
         selectors=[
             "h3_cell", "week_of_year",
-            # GEE reducer output band names for combined reducer
-            f"{index_id}_mean",
-            f"{index_id}_stdDev",
-            f"{index_id}_p10", f"{index_id}_p25", f"{index_id}_p50",
-            f"{index_id}_p75", f"{index_id}_p90",
-            f"{index_id}_count",
+            "mean", "stddev",
+            "p10", "p25", "p50", "p75", "p90",
+            "sample_count",
             "region_id", "index_id", "sensor_id",
         ],
     )
@@ -181,4 +192,6 @@ def load_baseline_csv_to_bq(
     job.result()
     log.info("Baseline BQ load complete region=%s index=%s job=%s", region_id, index_id, job.job_id)
     return job.job_id
+
+
 

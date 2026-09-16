@@ -41,7 +41,7 @@ def region_geojson_to_h3_fc(region_geojson: dict, resolution: int = H3_RESOLUTIO
     For large regions (>50k cells), pre-upload as a GEE Asset once on registration
     and load via load_h3_asset() — don't call this per scan.
     """
-    cells = h3.polyfill_geojson(region_geojson, resolution)
+    cells = h3.geo_to_cells(region_geojson, resolution)
     features = []
     for cell in cells:
         # h3.cell_to_boundary returns (lat, lon) tuples; GeoJSON wants [lon, lat]
@@ -245,3 +245,4 @@ def load_h3_csv_to_bq(
     job.result()   # block until done
     log.info("BQ load complete for %s → %s (job=%s)", gcs_uri, table_ref, job.job_id)
     return job.job_id
+

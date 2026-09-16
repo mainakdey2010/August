@@ -181,3 +181,4 @@ def load_baseline_csv_to_bq(
     job.result()
     log.info("Baseline BQ load complete region=%s index=%s job=%s", region_id, index_id, job.job_id)
     return job.job_id
+

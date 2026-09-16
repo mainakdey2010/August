@@ -251,7 +251,7 @@ def load_h3_csv_to_bq(
             "region_id":      region_id[:63],
             "scan_id":        scan_id[:63],
             "env":            os.environ.get("ENV", "dev"),
-            "asset_tier":     "n/a",
+            "asset_tier":     "na",
         },
     )
 
@@ -260,4 +260,5 @@ def load_h3_csv_to_bq(
     job.result()   # block until done
     log.info("BQ load complete for %s → %s (job=%s)", gcs_uri, table_ref, job.job_id)
     return job.job_id
+
 

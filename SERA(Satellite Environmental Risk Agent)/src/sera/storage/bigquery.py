@@ -48,7 +48,7 @@ def get_last_processed_date(
             "workflow_name": "sera-ingest",
             "region_id":     region_id[:63],
             "scan_id":       "checkpoint",
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=[
             bigquery.ScalarQueryParameter("region_id", "STRING", region_id),
@@ -111,7 +111,7 @@ def run_anomaly_detection_query(
             "workflow_name": "sera-agents",
             "region_id":     region_id[:63],
             "scan_id":       scan_id[:63],
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=[
             bigquery.ScalarQueryParameter("scan_id",   "STRING", scan_id),
@@ -172,8 +172,9 @@ def update_scan_log(
             "workflow_name": "sera-scan",
             "region_id":     region_id[:63],
             "scan_id":       scan_id[:63],
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=params,
     )
     bq_client.query(query, job_config=job_config).result()
+

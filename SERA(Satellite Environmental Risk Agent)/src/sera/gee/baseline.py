@@ -183,7 +183,7 @@ def load_baseline_csv_to_bq(
             "region_id":      region_id[:63],
             "scan_id":        "baseline-build",
             "env":            os.environ.get("ENV", "dev"),
-            "asset_tier":     "n/a",
+            "asset_tier":     "na",
         },
     )
 

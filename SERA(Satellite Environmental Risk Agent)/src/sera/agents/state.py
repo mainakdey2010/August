@@ -20,12 +20,19 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from google.cloud import bigquery
 
 log = logging.getLogger(__name__)
+
+
+def _json_default(value: Any) -> str:
+    """Encode BigQuery DATE/TIMESTAMP values without hiding unsupported types."""
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 class AgentStateStore:
@@ -43,7 +50,7 @@ class AgentStateStore:
                 "scan_id":    scan_id,
                 "region_id":  region_id,
                 "stage":      "anomaly_detection",
-                "payload":    json.dumps(payload),
+                "payload":    json.dumps(payload, default=_json_default, allow_nan=False),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
             labels={"workflow_name": "sera-agents", "scan_id": scan_id[:63], "region_id": region_id[:63]},
@@ -61,7 +68,7 @@ class AgentStateStore:
                 "scan_id":    scan_id,
                 "region_id":  region_id,
                 "stage":      "risk_evaluation",
-                "payload":    json.dumps(payload),
+                "payload":    json.dumps(payload, default=_json_default, allow_nan=False),
                 "created_at": datetime.now(timezone.utc).isoformat(),
             },
             labels={"workflow_name": "sera-agents", "scan_id": scan_id[:63], "region_id": region_id[:63]},
@@ -75,10 +82,13 @@ class AgentStateStore:
     def completed_stages(self, scan_id: str) -> set[str]:
         """Return set of stage names already completed for this scan_id."""
         done: set[str] = set()
-        for table in ("agent_anomaly_results", "agent_risk_results"):
-            row = self._read_latest(table, scan_id)
-            if row is not None:
-                done.add(row.get("stage", ""))
+        for table, stage in (
+            ("agent_anomaly_results", "anomaly_detection"),
+            ("agent_risk_results", "risk_evaluation"),
+        ):
+            # _read_latest returns only the payload, not the BQ stage column.
+            if self._read_latest(table, scan_id) is not None:
+                done.add(stage)
         return done
 
     # ── Internal helpers ──────────────────────────────────────────────────────
@@ -117,4 +127,5 @@ class AgentStateStore:
         if not rows:
             return None
         return json.loads(rows[0]["payload"])
+
 

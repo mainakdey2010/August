@@ -179,8 +179,12 @@ def update_scan_log(
             elif v and isinstance(v[0], int):  elem_type = "INT64"
             params.append(bigquery.ArrayQueryParameter(k, elem_type, v))
         else:
-            type_map = {str: "STRING", bool: "BOOL", int: "INT64", float: "FLOAT64"}
-            params.append(bigquery.ScalarQueryParameter(k, type_map.get(type(v), "STRING"), v))
+            from datetime import date as _date
+            if isinstance(v, _date):
+                params.append(bigquery.ScalarQueryParameter(k, "DATE", v.isoformat()))
+            else:
+                type_map = {str: "STRING", bool: "BOOL", int: "INT64", float: "FLOAT64"}
+                params.append(bigquery.ScalarQueryParameter(k, type_map.get(type(v), "STRING"), v))
 
     job_config = build_job_config(
         labels={
@@ -193,5 +197,6 @@ def update_scan_log(
         query_parameters=params,
     )
     bq_client.query(query, job_config=job_config).result()
+
 
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -167,7 +168,7 @@ def _run_risk_evaluation(
         )
         asset_risks.append(result)
 
-    return {"scan_id": scan_id, "asset_risks": [r.__dict__ for r in asset_risks]}
+    return {"scan_id": scan_id, "asset_risks": [asdict(r) for r in asset_risks]}
 
 
 def _run_reporting(
@@ -330,3 +331,4 @@ def _dict_to_result(d: dict) -> Any:
         affected_h3_cells = d.get("affected_h3_cells", []),
         reasoning         = d.get("reasoning", ""),
     )
+

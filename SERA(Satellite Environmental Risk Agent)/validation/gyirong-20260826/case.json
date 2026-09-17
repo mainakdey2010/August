@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "case_id": "gyirong-20260826",
+  "mode": "historical_replay",
+  "event_date": "2026-08-26",
+  "event_reference": {
+    "url": "https://arxiv.org/abs/2609.04563v2",
+    "evidence_type": "research_preprint",
+    "independent_validation_required": true
+  },
+  "locations": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            85.37777777777777,
+            28.279722222222222
+          ]
+        },
+        "properties": {
+          "id": "gyirong-port",
+          "role": "asset_reference_point",
+          "source": "user",
+          "footprint_verified": false
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            85.525,
+            28.285
+          ]
+        },
+        "properties": {
+          "id": "reported-source",
+          "role": "reported_avalanche_origin",
+          "source": "user",
+          "independently_verified": false
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            85.479,
+            28.333
+          ]
+        },
+        "properties": {
+          "id": "reported-barrier-lake",
+          "role": "reported_barrier_lake",
+          "source": "user",
+          "independently_verified": false
+        }
+      }
+    ]
+  },
+  "proposed_observation_windows": {
+    "pre_event": {
+      "start_inclusive": "2026-08-01",
+      "end_exclusive": "2026-08-26"
+    },
+    "post_event": {
+      "start_inclusive": "2026-08-27",
+      "end_exclusive": "2026-09-10"
+    },
+    "note": "Discover actual scene dates and valid pixel coverage first. These are proposed search windows, not observed acquisitions."
+  },
+  "claimed_downstream_extent_km": {
+    "value": 100,
+    "source": "user",
+    "verified": false,
+    "used_as_aoi": false
+  },
+  "execution": {
+    "enabled": false,
+    "reason": "Facility footprint, baseline readiness, imagery availability, replay semantics and worker readiness must be validated."
+  },
+  "acceptance": {
+    "positive": "Eligible observed change intersects independently verified affected geometry and registered as-of asset geometry.",
+    "negative_control": "Comparable observations outside mapped impact and before the event; evaluate false alarms.",
+    "insufficient_evidence": "Explicit when coverage, baseline support or suitable observations are missing.",
+    "early_warning": "Not established by post-event detection."
+  }
+}

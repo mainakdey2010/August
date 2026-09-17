@@ -176,14 +176,20 @@ def compute_index_and_export(
         crs="EPSG:4326",
     )
 
-    # Tag each feature with scan metadata
+    pixel_area = ee.Number(SCALE_METERS[sensor_id]).pow(2)
+
+    # Tag each feature with scan metadata and compute coverage_pct
+    # coverage_pct = valid (unmasked) pixels / total pixels in cell at this scale
     reduced = reduced.map(
         lambda f: f.set({
-            "scan_id":    scan_id,
-            "region_id":  region_id,
-            "index_id":   index_id,
-            "sensor_id":  sensor_id,
-            "image_date": image_date,
+            "scan_id":      scan_id,
+            "region_id":    region_id,
+            "index_id":     index_id,
+            "sensor_id":    sensor_id,
+            "image_date":   image_date,
+            "coverage_pct": f.getNumber("count").divide(
+                f.geometry().area().divide(pixel_area)
+            ).min(1.0),
         })
     )
 
@@ -199,7 +205,7 @@ def compute_index_and_export(
         fileNamePrefix=export_prefix,
         fileFormat="CSV",
         selectors=[
-            "h3_cell", "mean", "count", "stdDev",
+            "h3_cell", "mean", "count", "stdDev", "coverage_pct",
             "scan_id", "region_id", "index_id", "sensor_id", "image_date",
         ],
     )
@@ -235,11 +241,12 @@ def load_h3_csv_to_bq(
         skip_leading_rows=1,
         autodetect=False,
         schema=[
-            bigquery.SchemaField("h3_cell",     "STRING",  mode="REQUIRED"),
-            bigquery.SchemaField("index_value",  "FLOAT64"),   # renamed from 'mean'
-            bigquery.SchemaField("pixel_count",  "INT64"),     # from 'count'
-            bigquery.SchemaField("stddev",       "FLOAT64"),   # from 'stdDev'
-            bigquery.SchemaField("scan_id",      "STRING",  mode="REQUIRED"),
+            bigquery.SchemaField("h3_cell",       "STRING",  mode="REQUIRED"),
+            bigquery.SchemaField("index_value",   "FLOAT64"),   # from 'mean'
+            bigquery.SchemaField("pixel_count",   "INT64"),     # from 'count'
+            bigquery.SchemaField("stddev",        "FLOAT64"),   # from 'stdDev'
+            bigquery.SchemaField("coverage_pct",  "FLOAT64"),   # valid pixels / total pixels in cell
+            bigquery.SchemaField("scan_id",       "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("region_id",    "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("index_id",     "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("sensor_id",    "STRING",  mode="REQUIRED"),
@@ -260,5 +267,6 @@ def load_h3_csv_to_bq(
     job.result()   # block until done
     log.info("BQ load complete for %s → %s (job=%s)", gcs_uri, table_ref, job.job_id)
     return job.job_id
+
 
 

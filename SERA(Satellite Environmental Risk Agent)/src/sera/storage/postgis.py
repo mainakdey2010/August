@@ -77,7 +77,7 @@ def resolve_h3_to_assets(
 def _h3_to_wkt(cell: str) -> str:
     import h3
     boundary = h3.cell_to_boundary(cell)   # [(lat, lon), ...]
-    coords = " ".join(f"{lon} {lat}" for lat, lon in boundary)
+    coords = ", ".join(f"{lon} {lat}" for lat, lon in boundary)
     first_lon, first_lat = boundary[0][1], boundary[0][0]
     return f"POLYGON(({coords}, {first_lon} {first_lat}))"
 
@@ -222,3 +222,4 @@ def delete_webhook(webhook_id: str) -> None:
 def _hash_secret(secret: str) -> str:
     import hashlib
     return hashlib.sha256(secret.encode()).hexdigest()
+

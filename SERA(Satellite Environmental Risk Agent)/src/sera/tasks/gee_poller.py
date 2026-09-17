@@ -98,9 +98,23 @@ def poll_active_tasks() -> dict[str, Any]:
 
         stats["still_running"] += len(running_tasks)
 
-        # All tasks settled — decide next step
+        # All GEE tasks settled — wait for async BQ loads to complete before evaluating
         if not running_tasks:
-            _evaluate_scan_completion(bq, rc, scan_id, region_id, scan)
+            dispatched = [
+                tid for tid in scan["gee_task_ids"]
+                if rc.exists(f"sera:gee:loaded:{scan_id}:{tid}")
+            ]
+            bq_done_indices = [
+                k.decode().split(":")[-1]
+                for k in rc.keys(f"sera:gee:bq_done:{scan_id}:*")
+            ]
+            if len(bq_done_indices) < len(dispatched):
+                log.info(
+                    "scan=%s waiting for BQ loads: %d/%d done",
+                    scan_id, len(bq_done_indices), len(dispatched),
+                )
+            else:
+                _evaluate_scan_completion(bq, rc, scan_id, region_id, scan)
 
     return stats
 
@@ -284,4 +298,5 @@ def _release_slot(rc: redis_lib.Redis) -> None:
         rc.decr(GEE_SLOT_KEY)
     # Reset expiry to prevent permanent lock on unexpected states
     rc.expire(GEE_SLOT_KEY, GEE_SLOT_EXPIRY_S)
+
 

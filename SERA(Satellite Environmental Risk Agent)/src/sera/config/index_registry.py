@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-_REGISTRY_PATH = Path(__file__).parents[4] / "config" / "index-registry.yaml"
+_REGISTRY_PATH = Path(__file__).parents[3] / "config" / "index-registry.yaml"
 _registry: dict[str, Any] | None = None
 _lock = threading.Lock()
 
@@ -42,3 +42,4 @@ def invalidate() -> None:
     global _registry
     with _lock:
         _registry = None
+

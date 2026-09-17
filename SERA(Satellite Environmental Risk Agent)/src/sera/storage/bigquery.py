@@ -48,7 +48,7 @@ def get_last_processed_date(
             "workflow_name": "sera-ingest",
             "region_id":     region_id[:63],
             "scan_id":       "checkpoint",
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=[
             bigquery.ScalarQueryParameter("region_id", "STRING", region_id),
@@ -111,7 +111,7 @@ def run_anomaly_detection_query(
             "workflow_name": "sera-agents",
             "region_id":     region_id[:63],
             "scan_id":       scan_id[:63],
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=[
             bigquery.ScalarQueryParameter("scan_id",   "STRING", scan_id),
@@ -146,25 +146,41 @@ def update_scan_log(
     updates: dict[str, Any],
 ) -> None:
     """
-    Update scan_log fields for a given scan_id.
-    BQ doesn't support row-level UPDATE efficiently on streaming inserts,
-    so we use a MERGE on the clustered scan_id column.
+    Upsert scan_log for a given scan_id.
+    WHEN MATCHED → UPDATE; WHEN NOT MATCHED → INSERT (creates the row on first call).
+    Supports scalar and list/array field values.
     """
     env = os.environ.get("ENV", "dev")
     set_clauses = ", ".join(f"T.{k} = S.{k}" for k in updates)
     params_sql  = ", ".join(f"@{k} AS {k}" for k in updates)
 
+    update_keys  = list(updates.keys())
+    insert_cols  = ", ".join(["scan_id", "region_id"] + update_keys + ["created_at", "updated_at"])
+    insert_vals  = ", ".join(
+        ["@scan_id", "@region_id"] + [f"@{k}" for k in update_keys]
+        + ["CURRENT_TIMESTAMP()", "CURRENT_TIMESTAMP()"]
+    )
+
     query = f"""
     MERGE `{dataset}.scan_log` T
-    USING (SELECT @scan_id AS scan_id, {params_sql}) S
+    USING (SELECT @scan_id AS scan_id, @region_id AS region_id, {params_sql}) S
     ON T.scan_id = S.scan_id
     WHEN MATCHED THEN UPDATE SET {set_clauses}, T.updated_at = CURRENT_TIMESTAMP()
+    WHEN NOT MATCHED THEN INSERT ({insert_cols}) VALUES ({insert_vals})
     """
-    params = [bigquery.ScalarQueryParameter("scan_id", "STRING", scan_id)]
+    params = [
+        bigquery.ScalarQueryParameter("scan_id",   "STRING", scan_id),
+        bigquery.ScalarQueryParameter("region_id", "STRING", region_id),
+    ]
     for k, v in updates.items():
-        type_map = {str: "STRING", bool: "BOOL", int: "INT64", float: "FLOAT64"}
-        bq_type = type_map.get(type(v), "STRING")
-        params.append(bigquery.ScalarQueryParameter(k, bq_type, v))
+        if isinstance(v, list):
+            elem_type = "STRING"
+            if v and isinstance(v[0], float): elem_type = "FLOAT64"
+            elif v and isinstance(v[0], int):  elem_type = "INT64"
+            params.append(bigquery.ArrayQueryParameter(k, elem_type, v))
+        else:
+            type_map = {str: "STRING", bool: "BOOL", int: "INT64", float: "FLOAT64"}
+            params.append(bigquery.ScalarQueryParameter(k, type_map.get(type(v), "STRING"), v))
 
     job_config = build_job_config(
         labels={
@@ -172,8 +188,10 @@ def update_scan_log(
             "workflow_name": "sera-scan",
             "region_id":     region_id[:63],
             "scan_id":       scan_id[:63],
-            "asset_tier":    "n/a",
+            "asset_tier":    "na",
         },
         query_parameters=params,
     )
     bq_client.query(query, job_config=job_config).result()
+
+

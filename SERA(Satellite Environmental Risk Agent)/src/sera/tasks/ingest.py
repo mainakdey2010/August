@@ -203,6 +203,8 @@ def load_completed_gee_export(
     job_id  = load_h3_csv_to_bq(gcs_uri, bq, BQ_DATASET, scan_id, region_id)
 
     rc.decr(GEE_SLOT_KEY)
+    # Mark BQ load complete (separate from "dispatched" key set by poller)
+    rc.setex(f"sera:gee:bq_done:{scan_id}:{index_id}", 86400, "1")
 
     return job_id
 
@@ -298,4 +300,5 @@ def _avg_cloud_cover(availability, computable):
         for _, sid in computable
     ]
     return sum(covers) / len(covers) if covers else 0.0
+
 

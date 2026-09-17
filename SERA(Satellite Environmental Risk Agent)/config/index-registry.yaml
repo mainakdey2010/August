@@ -9,7 +9,7 @@ indices:
     name: Normalized Difference Vegetation Index
     description: General vegetation health and density
     formula_human: "(NIR - Red) / (NIR + Red)"
-    formula_gee: "(b('NIR') - b('Red')) / (b('NIR') + b('Red'))"
+    formula_gee: "(NIR - Red) / (NIR + Red)"
     sensors:
       primary: S2_SR
       fallback: L8_T1      # Landsat as secondary optical source
@@ -31,7 +31,7 @@ indices:
     name: Normalized Difference Red Edge
     description: Early canopy stress detection — precedes NDVI signal by 2-3 weeks
     formula_human: "(NIR - RedEdge) / (NIR + RedEdge)"
-    formula_gee: "(b('NIR') - b('RE')) / (b('NIR') + b('RE'))"
+    formula_gee: "(NIR - RE) / (NIR + RE)"
     sensors:
       primary: S2_SR
       fallback: null        # No Landsat equivalent — red edge band not available
@@ -51,7 +51,7 @@ indices:
     name: Normalized Difference Water Index
     description: Surface water extent and canopy water content
     formula_human: "(Green - NIR) / (Green + NIR)"
-    formula_gee: "(b('Green') - b('NIR')) / (b('Green') + b('NIR'))"
+    formula_gee: "(Green - NIR) / (Green + NIR)"
     sensors:
       primary: S2_SR
       fallback: L8_T1
@@ -71,7 +71,7 @@ indices:
     name: Modified Normalized Difference Water Index
     description: Open water mapping — reduced soil and vegetation noise vs. NDWI
     formula_human: "(Green - SWIR1) / (Green + SWIR1)"
-    formula_gee: "(b('Green') - b('SWIR1')) / (b('Green') + b('SWIR1'))"
+    formula_gee: "(Green - SWIR1) / (Green + SWIR1)"
     sensors:
       primary: S2_SR
       fallback: L8_T1
@@ -92,7 +92,7 @@ indices:
     name: Normalized Burn Ratio
     description: Post-fire burn severity assessment
     formula_human: "(NIR - SWIR2) / (NIR + SWIR2)"
-    formula_gee: "(b('NIR') - b('SWIR2')) / (b('NIR') + b('SWIR2'))"
+    formula_gee: "(NIR - SWIR2) / (NIR + SWIR2)"
     sensors:
       primary: S2_SR
       fallback: L8_T1
@@ -128,7 +128,7 @@ indices:
     name: Bare Soil Index
     description: Exposed/degraded soil, deforestation, construction activity
     formula_human: "((SWIR1 + Red) - (NIR + Blue)) / ((SWIR1 + Red) + (NIR + Blue))"
-    formula_gee: "((b('SWIR1') + b('Red')) - (b('NIR') + b('Blue'))) / ((b('SWIR1') + b('Red')) + (b('NIR') + b('Blue')))"
+    formula_gee: "((SWIR1 + Red) - (NIR + Blue)) / ((SWIR1 + Red) + (NIR + Blue))"
     sensors:
       primary: S2_SR
       fallback: L8_T1
@@ -190,3 +190,4 @@ indices:
       Used as a proxy for NDVI and NDRE when optical sensors are unavailable.
       Sensitivity differs: SAR_RVI responds to canopy structure, NDVI to chlorophyll.
       Co-interpret with caution — a low SAR_RVI reading does not map 1:1 to low NDVI.
+

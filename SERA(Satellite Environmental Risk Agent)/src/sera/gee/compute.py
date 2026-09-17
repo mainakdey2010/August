@@ -41,7 +41,7 @@ def region_geojson_to_h3_fc(region_geojson: dict, resolution: int = H3_RESOLUTIO
     For large regions (>50k cells), pre-upload as a GEE Asset once on registration
     and load via load_h3_asset() — don't call this per scan.
     """
-    cells = h3.polyfill_geojson(region_geojson, resolution)
+    cells = h3.geo_to_cells(region_geojson, resolution)
     features = []
     for cell in cells:
         # h3.cell_to_boundary returns (lat, lon) tuples; GeoJSON wants [lon, lat]
@@ -62,7 +62,21 @@ def upload_h3_cells_as_asset(
     Persist H3 cells as a GEE Asset (once per region registration).
     Returns asset_id.
     """
-    asset_id = f"projects/sera-gee-{env}/assets/regions/{region_id}/h3_cells"
+    gcp_project = os.environ.get("GCP_PROJECT", "august-505217")
+    asset_id = f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}/h3_cells"
+
+    # GEE requires parent folders to exist before export
+    for folder in [
+        f"projects/{gcp_project}/assets/sera",
+        f"projects/{gcp_project}/assets/sera/{env}",
+        f"projects/{gcp_project}/assets/sera/{env}/regions",
+        f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}",
+    ]:
+        try:
+            ee.data.createAsset({"type": "FOLDER"}, folder)
+        except Exception:
+            pass  # already exists
+
     task = ee.batch.Export.table.toAsset(
         collection=h3_fc,
         description=f"sera-h3cells-{region_id}",
@@ -74,7 +88,8 @@ def upload_h3_cells_as_asset(
 
 
 def load_h3_asset(region_id: str, env: str) -> ee.FeatureCollection:
-    asset_id = f"projects/sera-gee-{env}/assets/regions/{region_id}/h3_cells"
+    gcp_project = os.environ.get("GCP_PROJECT", "august-505217")
+    asset_id = f"projects/{gcp_project}/assets/sera/{env}/regions/{region_id}/h3_cells"
     return ee.FeatureCollection(asset_id)
 
 
@@ -161,14 +176,20 @@ def compute_index_and_export(
         crs="EPSG:4326",
     )
 
-    # Tag each feature with scan metadata
+    pixel_area = ee.Number(SCALE_METERS[sensor_id]).pow(2)
+
+    # Tag each feature with scan metadata and compute coverage_pct
+    # coverage_pct = valid (unmasked) pixels / total pixels in cell at this scale
     reduced = reduced.map(
         lambda f: f.set({
-            "scan_id":    scan_id,
-            "region_id":  region_id,
-            "index_id":   index_id,
-            "sensor_id":  sensor_id,
-            "image_date": image_date,
+            "scan_id":      scan_id,
+            "region_id":    region_id,
+            "index_id":     index_id,
+            "sensor_id":    sensor_id,
+            "image_date":   image_date,
+            "coverage_pct": f.getNumber("count").divide(
+                f.geometry().area().divide(pixel_area)
+            ).min(1.0),
         })
     )
 
@@ -184,7 +205,7 @@ def compute_index_and_export(
         fileNamePrefix=export_prefix,
         fileFormat="CSV",
         selectors=[
-            "h3_cell", "mean", "count", "stdDev",
+            "h3_cell", "mean", "count", "stdDev", "coverage_pct",
             "scan_id", "region_id", "index_id", "sensor_id", "image_date",
         ],
     )
@@ -220,11 +241,12 @@ def load_h3_csv_to_bq(
         skip_leading_rows=1,
         autodetect=False,
         schema=[
-            bigquery.SchemaField("h3_cell",     "STRING",  mode="REQUIRED"),
-            bigquery.SchemaField("index_value",  "FLOAT64"),   # renamed from 'mean'
-            bigquery.SchemaField("pixel_count",  "INT64"),     # from 'count'
-            bigquery.SchemaField("stddev",       "FLOAT64"),   # from 'stdDev'
-            bigquery.SchemaField("scan_id",      "STRING",  mode="REQUIRED"),
+            bigquery.SchemaField("h3_cell",       "STRING",  mode="REQUIRED"),
+            bigquery.SchemaField("index_value",   "FLOAT64"),   # from 'mean'
+            bigquery.SchemaField("pixel_count",   "INT64"),     # from 'count'
+            bigquery.SchemaField("stddev",        "FLOAT64"),   # from 'stdDev'
+            bigquery.SchemaField("coverage_pct",  "FLOAT64"),   # valid pixels / total pixels in cell
+            bigquery.SchemaField("scan_id",       "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("region_id",    "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("index_id",     "STRING",  mode="REQUIRED"),
             bigquery.SchemaField("sensor_id",    "STRING",  mode="REQUIRED"),
@@ -236,7 +258,7 @@ def load_h3_csv_to_bq(
             "region_id":      region_id[:63],
             "scan_id":        scan_id[:63],
             "env":            os.environ.get("ENV", "dev"),
-            "asset_tier":     "n/a",
+            "asset_tier":     "na",
         },
     )
 
@@ -245,3 +267,6 @@ def load_h3_csv_to_bq(
     job.result()   # block until done
     log.info("BQ load complete for %s → %s (job=%s)", gcs_uri, table_ref, job.job_id)
     return job.job_id
+
+
+

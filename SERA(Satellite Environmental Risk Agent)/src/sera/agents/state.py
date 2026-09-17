@@ -88,7 +88,7 @@ class AgentStateStore:
         job_config = bigquery.QueryJobConfig(labels={
             **labels,
             "env": self._env,
-            "asset_tier": "n/a",
+            "asset_tier": "na",
         })
         errors = self._bq.insert_rows_json(full_table, [row])
         if errors:
@@ -108,12 +108,13 @@ class AgentStateStore:
             labels={
                 "workflow_name": "sera-agents",
                 "scan_id":       scan_id[:63],
-                "region_id":     "n/a",
+                "region_id":     "na",
                 "env":           self._env,
-                "asset_tier":    "n/a",
+                "asset_tier":    "na",
             },
         )
         rows = list(self._bq.query(query, job_config=job_config).result())
         if not rows:
             return None
         return json.loads(rows[0]["payload"])
+

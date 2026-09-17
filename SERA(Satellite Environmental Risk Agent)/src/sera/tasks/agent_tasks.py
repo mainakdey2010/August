@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -74,7 +75,7 @@ def run_agent_chain(self, scan_id: str, region_id: str) -> dict[str, Any]:
         log.info("Stage risk_evaluation skipped (cached) scan=%s", scan_id)
 
     # ── Stage 3: Reporting ────────────────────────────────────────────────────
-    # Reporting always re-runs (idempotent write to risk_events; prose is cheap to regenerate)
+    # Reporting always re-runs. Event persistence still needs durable retry deduplication.
     event_rows = _run_reporting(bq, scan_id, region_id, risk_output, anomaly_output)
 
     # ── Persist & notify ──────────────────────────────────────────────────────
@@ -167,7 +168,7 @@ def _run_risk_evaluation(
         )
         asset_risks.append(result)
 
-    return {"scan_id": scan_id, "asset_risks": [r.__dict__ for r in asset_risks]}
+    return {"scan_id": scan_id, "asset_risks": [asdict(r) for r in asset_risks]}
 
 
 def _run_reporting(

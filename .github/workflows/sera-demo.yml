@@ -53,7 +53,7 @@ jobs:
           python - <<'PYTEST'
           import json, urllib.request
           with urllib.request.urlopen('http://localhost:8080/v1/demo/scenarios') as r:
-              assert len(json.load(r)) == 2
+              assert {s["region_id"] for s in json.load(r)} == {"sindh-flood-2022", "lahaina-fire-2023", "nepal-gyirong-disaster-2026", "upper-assam-flood-2026"}
           with urllib.request.urlopen('http://localhost:8080/') as r:
               assert b'What changed around this asset?' in r.read()
           PYTEST

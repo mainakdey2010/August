@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authenticated live acceptance: run BOTH scenarios and retain actual output."""
+"""Authenticated live acceptance: run all catalogue scenarios and retain actual output."""
 import argparse
 import json
 import pathlib
@@ -23,8 +23,13 @@ def call(path,body=None):
         return json.load(response)
 
 
+expected={'sindh-flood-2022','lahaina-fire-2023','nepal-gyirong-disaster-2026','upper-assam-flood-2026'}
+scenarios=call('/scenarios')
+actual={s['region_id'] for s in scenarios}
+if not expected.issubset(actual):
+    sys.exit('FAIL: deployed catalogue is missing expected replays: '+', '.join(sorted(expected-actual)))
 failed=False
-for scenario in call('/scenarios'):
+for scenario in scenarios:
     call('/regions',scenario)
     submitted=call('/scans',{'region_id':scenario['region_id']})
     sid=submitted['scan_id'];deadline=time.monotonic()+args.timeout

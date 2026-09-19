@@ -32,20 +32,24 @@ Open `http://localhost:8080`. Select a scenario and **Run live replay**. This au
 python3 deploy/demo-verify.py --url http://localhost:8080 --output demo-validation
 ```
 
-Acceptance requires BOTH scans to reach complete, actual Vertex model provenance and raw output, H3 evidence, asset-buffer evidence, persisted before/after PNGs, and a successful BigQuery load. The command saves JSON and images and exits nonzero on failure/timeout. Failure detail is in Cloud Run Job logs. Use **Retry this scan** after addressing a failure, then run verification again; it reuses the saved IDs. Continue fixes on this same branch and PR. No merge is needed to test it.
+Acceptance requires all four scans to reach complete, actual Vertex model provenance and raw output, H3 evidence, asset-buffer evidence, persisted before/after PNGs, and a successful BigQuery load. The command saves JSON and images and exits nonzero on failure/timeout. Failure detail is in Cloud Run Job logs. Use **Retry this scan** after addressing a failure, then run verification again; it reuses the saved IDs. Continue fixes on this same branch and PR. No merge is needed to test it.
 
 The model ID is intentionally required rather than hardcoding a model that may be unavailable or retired. IAM alone does not guarantee a particular model is enabled in the chosen location.
 
-## Two retrospective scenarios
+## Four retrospective scenarios
 
 | Scenario | Monitoring point (illustrative) | Before window | After window | Demo question |
 |---|---|---|---|---|
 | Sindh floods, 2022 | Near Sehwan: 26.43 N, 67.85 E; 5 km half-width | June 1–30, 2022 | September 1–20, 2022 | Where did NDWI/MNDWI rise, and is the asset buffer sufficiently observed? |
 | Lahaina fire, 2023 | Town monitoring point: 20.88 N, 156.675 W; 3 km half-width | July 15–August 8, 2023 | August 9–31, 2023 | Where did NBR/NDVI fall and dNBR rise after the August 8 fire? |
+| Nepal–Gyirong disaster, August 26, 2026 | User-supplied port point: 28.279722 N, 85.377778 E; 3 km half-width | July 26–August 26, 2026 | August 27–September 19, 2026 | What optical change is visible near the port, and where do terrain/cloud gaps prevent interpretation? |
+| Upper Assam floods, 2026 | Illustrative Sivasagar-area point: 26.98 N, 94.63 E; 5 km half-width | June 1–July 1, 2026 | July 22–August 15, 2026 | Where did water indices rise or vegetation decline, relative to prior monsoon seasons? |
 
 All window ends are **exclusive**. The selected points are demo monitoring locations, not verified client assets or property boundaries. Event references establish historical context, not point-level impact. No fixed positive outcome is inserted. If cloud-free imagery or asset-buffer evidence is insufficient, the UI shows the gap and live acceptance fails rather than fabricating a detection.
 
 Historical context: [ADB's Sindh reconstruction project](https://www.adb.org/projects/57323-001/main), [FEMA Hawaii disaster declaration](https://www.fema.gov/disaster/4724), and [AP's account of the August 8 Lahaina fire](https://apnews.com/article/4dfee66d3185b1a1f7ea5a946bce9eb2).
+
+The Gyirong replay uses the supplied customs-point coordinates, whose facility boundary remains unverified. [Stimson’s August 2026 event account](https://www.stimson.org/2026/a-cascading-disaster-on-the-china-nepal-border-what-to-know-about-the-august-2026-rasuwa-flood/) provides context. The Assam replay uses a bounded sample inside the previously requested Upper Assam area; [regional reporting](https://www.theguardian.com/global-development/2026/aug/14/india-assam-climate-disaster-floods-brahmaputra-homeless-deaths) documents the July–August floods. Both use five prior seasonal windows. Neither covers an entire disaster footprint. Monsoon clouds, mountain shadows, transient flood peaks and seasonal paddy water can limit interpretation.
 
 Suggested demo sequence: open a completed saved run → show before/after acquisition windows → choose NDWI or dNBR on the H3 map → inspect the asset-buffer row and seasonal chart → read Gemini's evidence-linked briefing → show source IDs, gaps and model provenance → download the evidence package. A live rerun can be shown separately; processing latency is measured, not promised.
 
@@ -97,6 +101,6 @@ SQLite is only for local development and rejected by the Cloud Run API. Cloud wo
 
 These are **retrospective reconstructions**, using observations acquired before the cutoff. The original operational availability of reprocessed historical products is not established, so no warning lead time is claimed. A 0.15 directional index delta is an uncalibrated review rule, not an event probability or damage classifier. Seasonal composites can differ in clear-pixel support. The UI keeps those limitations attached to the report; semantic interpretation still needs human review.
 
-No SAR flood classifier, LST, nine-index certification, 100 × 100 km throughput claim, automated geocoding, or automatic emergency action is included. The two real-event scenarios are executable definitions, not successful detection claims until their saved live outputs are reviewed. Existing GCS lifecycle rules may remove previews after 30 days; export the demo package if it must remain available longer. GCS/BQ operations and Vertex calls incur project usage; Cloud Run Jobs stop after each run, and the API has min instances zero.
+No SAR flood classifier, LST, nine-index certification, 100 × 100 km throughput claim, automated geocoding, or automatic emergency action is included. The four real-event scenarios are executable definitions, not successful detection claims until their saved live outputs are reviewed. Existing GCS lifecycle rules may remove previews after 30 days; export the demo package if it must remain available longer. GCS/BQ operations and Vertex calls incur project usage; Cloud Run Jobs stop after each run, and the API has min instances zero.
 
 References: [Sentinel-2 catalogue and QA60 gap](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED), [ADK LLM agents](https://adk.dev/agents/llm-agents/), [ADK Gemini configuration](https://adk.dev/agents/models/google-gemini/), [Cloud Run roles](https://docs.cloud.google.com/iam/docs/roles-permissions/run).

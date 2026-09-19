@@ -71,7 +71,7 @@ def test_dates_and_scope_validation():
         Region.model_validate(cfg)
 
 
-@pytest.mark.parametrize('scenario',[0,1])
+@pytest.mark.parametrize('scenario',range(len(SCENARIOS)))
 def test_complete_pipeline_and_duplicate_worker(store,scenario):
     s=create(store,scenario)
     collector=Mock(return_value=measurements(s)); archive=Mock(return_value='test-load-job');save=Mock()
@@ -149,11 +149,12 @@ def test_concurrent_submit_and_claim(store):
     assert sum(claimed)==1
 
 
-def test_api_replay_dispatch_poll_retry_export(store):
+@pytest.mark.parametrize('scenario',range(len(SCENARIOS)))
+def test_api_replay_dispatch_poll_retry_export(store,scenario):
     app=FastAPI();app.include_router(api.router);app.dependency_overrides[api.get_store]=lambda:store
     client=TestClient(app)
-    assert len(client.get('/v1/demo/scenarios').json())==2
-    s=SCENARIOS[0]
+    assert {r['region_id'] for r in client.get('/v1/demo/scenarios').json()} == {s.region_id for s in SCENARIOS}
+    s=SCENARIOS[scenario]
     assert client.post('/v1/demo/scenarios/'+s.region_id+'/register').status_code==201
     with patch.object(api,'dispatch',side_effect=RuntimeError('not configured')):
         result=client.post('/v1/demo/scans',json={'region_id':s.region_id}).json()
@@ -188,7 +189,7 @@ def test_cloud_sqlite_rejected(monkeypatch,tmp_path):
     with pytest.raises(RuntimeError):Store('sqlite:///'+str(tmp_path/'db'))
 
 
-def test_real_ee_expression_graph_for_both_scenarios(monkeypatch):
+def test_real_ee_expression_graph_for_all_scenarios(monkeypatch):
     import ee
     from ee.apitestcase import ApiTestCase
     from sera.demo.imagery import collect
@@ -210,10 +211,11 @@ def test_real_ee_expression_graph_for_both_scenarios(monkeypatch):
             for scenario in SCENARIOS:
                 result=collect(scenario)
                 assert set(result['images'])=={'before','after'}
-        assert len(graphs)==6
+        assert len(graphs)==3*len(SCENARIOS)
         assert 'SCL' in graphs[0] and 'QA60' not in graphs[0]
         assert 'EPSG:6933' in graphs[0]
-        assert '2023-08-31' in graphs[3]
+        for i, scenario in enumerate(SCENARIOS):
+            assert scenario.after.end.isoformat() in graphs[i*3]
     finally:
         harness.tearDown()
 

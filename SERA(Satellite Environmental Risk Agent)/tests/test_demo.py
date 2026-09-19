@@ -245,3 +245,37 @@ def test_cross_year_baseline_dates():
     for start,end in baseline_windows(scenario):
         assert start<end<scenario.after.start
         assert end.year==start.year+1
+
+
+def test_archive_retry_uses_dataset_location(monkeypatch):
+    from google.api_core.exceptions import Conflict
+    from sera.demo.artifacts import archive
+    client=Mock(project='test-project')
+    client.get_dataset.return_value.location='asia-south1'
+    client.load_table_from_json.side_effect=Conflict('already submitted')
+    client.get_job.return_value.job_id='existing-load'
+    client.get_job.return_value.error_result=None
+    packet={'asset_id':'test','as_of':'2022-09-20'}
+    with patch('google.cloud.bigquery.Client',return_value=client):
+        assert archive(ID,packet,[])=='existing-load'
+    assert client.get_job.call_args.kwargs['location']=='asia-south1'
+    assert client.load_table_from_json.call_args.kwargs['location']=='asia-south1'
+
+
+def test_model_cannot_disable_human_review():
+    p=summarize(SCENARIOS[0],ID,measurements(SCENARIOS[0]))
+    r=report(p);r['human_review_required']=False
+    with pytest.raises(ValidationError):reporting.validate(r,p)
+
+
+def test_failed_bq_load_can_be_retried_without_reusing_failed_job():
+    from google.api_core.exceptions import Conflict
+    from sera.demo.artifacts import archive
+    client=Mock(project='test-project')
+    client.get_dataset.return_value.location='asia-south1'
+    completed=Mock(job_id='retry-load')
+    client.load_table_from_json.side_effect=[Conflict('previous job'),completed]
+    client.get_job.return_value.error_result={'reason':'accessDenied'}
+    with patch('google.cloud.bigquery.Client',return_value=client):
+        assert archive(ID,{'asset_id':'test','as_of':'2022-09-20'},[])=='retry-load'
+    assert client.load_table_from_json.call_args.kwargs['job_id'].endswith('_retry_1')

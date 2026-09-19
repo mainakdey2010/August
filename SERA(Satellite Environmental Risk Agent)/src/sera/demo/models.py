@@ -68,4 +68,10 @@ class Report(BaseModel):
     interpretation: str = Field(min_length=1, max_length=2500)
     limitations: list[str] = Field(min_length=1, max_length=15)
     review_action: str = Field(min_length=1, max_length=1500)
-    human_review_required: Literal[True]
+    human_review_required: bool
+
+    @model_validator(mode='after')
+    def require_human_review(self):
+        if self.human_review_required is not True:
+            raise ValueError('Human review is mandatory')
+        return self

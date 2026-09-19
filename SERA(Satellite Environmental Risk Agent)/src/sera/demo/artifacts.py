@@ -41,12 +41,21 @@ def archive(scan_id, packet, features):
     schema=[bigquery.SchemaField('scan_id','STRING'),bigquery.SchemaField('asset_id','STRING'),
             bigquery.SchemaField('as_of','DATE'),bigquery.SchemaField('evidence_json','STRING'),
             bigquery.SchemaField('feature_count','INTEGER')]
+    location=client.get_dataset(f'{client.project}.{dataset}').location
     job_id='sera_demo_'+hashlib.sha256(scan_id.encode()).hexdigest()
     from google.api_core.exceptions import Conflict
-    try:
-        job=client.load_table_from_json([row],f'{client.project}.{dataset}.demo_evidence',job_id=job_id,
-            job_config=bigquery.LoadJobConfig(schema=schema,write_disposition='WRITE_APPEND'))
-    except Conflict:
-        job=client.get_job(job_id)
-    job.result(timeout=180)
-    return job.job_id
+    for attempt in range(10):
+        attempt_id=job_id if attempt == 0 else f'{job_id}_retry_{attempt}'
+        try:
+            job=client.load_table_from_json([row],f'{client.project}.{dataset}.demo_evidence',
+                job_id=attempt_id,location=location,
+                job_config=bigquery.LoadJobConfig(schema=schema,write_disposition='WRITE_APPEND'))
+        except Conflict:
+            job=client.get_job(attempt_id,location=location)
+            if job.error_result:
+                # A failed load never appended rows. Move to the next deterministic attempt;
+                # a successful or still-running load is always reused, never duplicated.
+                continue
+        job.result(timeout=180)
+        return job.job_id
+    raise RuntimeError('Ten failed archive load attempts; inspect BigQuery errors before recomputing')

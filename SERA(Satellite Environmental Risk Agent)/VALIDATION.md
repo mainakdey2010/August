@@ -3,7 +3,7 @@
 ## Executed locally
 
 - Python 3.12; actual installed Google ADK 2.9.2, Google GenAI 2.24.0, Earth Engine 1.7.43, H3 4.5.0.
-- `PYTHONPATH=src python -m pytest tests -q`: 21 tests passed (plus 6 unittest subtests).
+- `PYTHONPATH=src python -m pytest tests -q`: 24 tests passed (plus 6 unittest subtests).
 - Tests cover both replay pipelines using explicitly synthetic external-service adapters, actual ADK Agent/Runner execution with a model double, unknown citations, identity preservation, gaps and coverage, seasonal date ordering, concurrency/deduplication, model failure, checkpoint recovery and API retry/export.
 - Both scenario computation graphs are constructed and serialized using the real Earth Engine SDK with Google's offline algorithm catalogue. Network responses are mocked. This catches SDK/expression construction errors, not remote imagery/permission/coverage errors.
 - FastAPI root and OpenAPI return HTTP 200; scenario catalogue returns two scenarios; missing database configuration returns a visible HTTP 503.

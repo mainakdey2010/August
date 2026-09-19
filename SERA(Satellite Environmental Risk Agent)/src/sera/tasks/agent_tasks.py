@@ -1,14 +1,15 @@
 """
 Agent chain task — triggered by gee_poller once all GEE exports are loaded.
 
-Runs the three ADK agents sequentially (Anomaly → Risk → Reporting),
-using BQ-backed state for crash recovery.
+Runs the legacy deterministic stages sequentially (Anomaly → Risk → Templates),
+using BQ-backed state for crash recovery. Live ADK reporting is in sera.demo.reporting.
 Each stage checks if already completed before running.
 """
 from __future__ import annotations
 
 import logging
 import os
+from dataclasses import asdict
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -74,7 +75,7 @@ def run_agent_chain(self, scan_id: str, region_id: str) -> dict[str, Any]:
         log.info("Stage risk_evaluation skipped (cached) scan=%s", scan_id)
 
     # ── Stage 3: Reporting ────────────────────────────────────────────────────
-    # Reporting always re-runs (idempotent write to risk_events; prose is cheap to regenerate)
+
     event_rows = _run_reporting(bq, scan_id, region_id, risk_output, anomaly_output)
 
     # ── Persist & notify ──────────────────────────────────────────────────────
@@ -167,7 +168,7 @@ def _run_risk_evaluation(
         )
         asset_risks.append(result)
 
-    return {"scan_id": scan_id, "asset_risks": [r.__dict__ for r in asset_risks]}
+    return {"scan_id": scan_id, "asset_risks": [asdict(r) for r in asset_risks]}
 
 
 def _run_reporting(
@@ -330,3 +331,4 @@ def _dict_to_result(d: dict) -> Any:
         affected_h3_cells = d.get("affected_h3_cells", []),
         reasoning         = d.get("reasoning", ""),
     )
+

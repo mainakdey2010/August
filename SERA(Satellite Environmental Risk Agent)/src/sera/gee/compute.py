@@ -105,10 +105,9 @@ def _apply_scale_factors(image: ee.Image, sensor_id: str) -> ee.Image:
 
 def _apply_cloud_mask(image: ee.Image, sensor_id: str) -> ee.Image:
     if sensor_id == "S2_SR":
-        qa = image.select("QA60")
-        cloud   = 1 << 10
-        cirrus  = 1 << 11
-        mask = qa.bitwiseAnd(cloud).eq(0).And(qa.bitwiseAnd(cirrus).eq(0))
+        # QA60 is masked out in the 2022–2024 archive. Use SCL consistently.
+        scl = image.select("SCL")
+        mask = scl.eq(4).Or(scl.eq(5)).Or(scl.eq(6))
         return image.updateMask(mask)
     if sensor_id in ("L8_T1", "L9_T1"):
         qa = image.select("QA_PIXEL")
@@ -267,6 +266,7 @@ def load_h3_csv_to_bq(
     job.result()   # block until done
     log.info("BQ load complete for %s → %s (job=%s)", gcs_uri, table_ref, job.job_id)
     return job.job_id
+
 
 
 

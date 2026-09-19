@@ -1,0 +1,59 @@
+name: SERA demo validation
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - 'SERA(Satellite Environmental Risk Agent)/**'
+      - '.github/workflows/sera-demo.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sera_demo
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: sera_demo
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sera_demo -d sera_demo"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SERA_TEST_POSTGRES_URL: postgresql://sera_demo:ci-only-password@localhost:5432/sera_demo
+    defaults:
+      run:
+        working-directory: SERA(Satellite Environmental Risk Agent)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: 'SERA(Satellite Environmental Risk Agent)/src/sera/requirements.txt'
+      - run: pip install -r src/sera/requirements.txt pytest
+      - run: PYTHONPATH=src python -m pytest tests -q
+      - run: bash -n deploy/demo.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix tests/ui --ignore-scripts
+      - run: npm test --prefix tests/ui
+      - run: docker build -t sera-demo-ci .
+      - name: Container startup and HTTP smoke
+        run: |
+          docker run --rm -d --name sera-demo-smoke -p 127.0.0.1:8080:8080 \
+            -e DATABASE_URL=sqlite:////tmp/sera-smoke.db sera-demo-ci \
+            uvicorn sera.demo.app:app --host 0.0.0.0 --port 8080
+          trap 'docker logs sera-demo-smoke; docker rm -f sera-demo-smoke' EXIT
+          curl --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1 http://localhost:8080/v1/demo/health
+          python - <<'PYTEST'
+          import json, urllib.request
+          with urllib.request.urlopen('http://localhost:8080/v1/demo/scenarios') as r:
+              assert {s["region_id"] for s in json.load(r)} == {"sindh-flood-2022", "lahaina-fire-2023", "nepal-gyirong-disaster-2026", "upper-assam-flood-2026"}
+          with urllib.request.urlopen('http://localhost:8080/') as r:
+              assert b'What changed around this asset?' in r.read()
+          PYTEST

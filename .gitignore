@@ -28,3 +28,10 @@ terraform.tfstate.backup
 terraform.tfvars
 *.auto.tfvars
 
+
+# Local replay state / captured model outputs
+.sera-artifacts/
+demo-validation/
+*.sqlite
+*.db
+node_modules/

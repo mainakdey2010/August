@@ -1,0 +1,16 @@
+steps:
+  - id: tests
+    name: python:3.12-slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        pip install --no-cache-dir -r src/sera/requirements.txt pytest
+        PYTHONPATH=src python -m pytest tests -q
+  - id: image
+    name: gcr.io/cloud-builders/docker
+    args: [build, '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

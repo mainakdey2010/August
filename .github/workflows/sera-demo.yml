@@ -49,7 +49,7 @@ jobs:
             -e DATABASE_URL=sqlite:////tmp/sera-smoke.db sera-demo-ci \
             uvicorn sera.demo.app:app --host 0.0.0.0 --port 8080
           trap 'docker logs sera-demo-smoke; docker rm -f sera-demo-smoke' EXIT
-          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://localhost:8080/v1/demo/health
+          curl --fail --retry 20 --retry-all-errors --retry-connrefused --retry-delay 1 http://localhost:8080/v1/demo/health
           python - <<'PYTEST'
           import json, urllib.request
           with urllib.request.urlopen('http://localhost:8080/v1/demo/scenarios') as r:

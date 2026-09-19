@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # PostGIS client libs (psycopg2 needs libpq)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,6 +19,7 @@ ENV PYTHONPATH=/app/src
 
 # Default: API. Override CMD for worker variants.
 CMD ["uvicorn", "sera.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
 
 
 

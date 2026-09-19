@@ -88,7 +88,7 @@ def run_scan(
     bq    = _bq()
     scan_dt = date.fromisoformat(scan_date)
 
-    update_scan_log(bq, BQ_DATASET, scan_id, region_id, {"status": "ingesting"})
+    update_scan_log(bq, BQ_DATASET, scan_id, region_id, {"status": "ingesting", "scan_date": scan_dt})
 
     region_geom = ee.Geometry(region_geom_geojson)
 
@@ -300,5 +300,6 @@ def _avg_cloud_cover(availability, computable):
         for _, sid in computable
     ]
     return sum(covers) / len(covers) if covers else 0.0
+
 
 

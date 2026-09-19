@@ -355,3 +355,9 @@ def _count_by_tier(events: list[dict]) -> dict[str, int]:
         counts[tier] = counts.get(tier, 0) + 1
     return counts
 
+
+
+# Durable live-demo path: authenticated Cloud Run Job, real Earth Engine, ADK/Gemini.
+from sera.demo.api import router as demo_router, page as demo_page
+app.include_router(demo_router)
+app.add_api_route('/', demo_page, methods=['GET'], include_in_schema=False)

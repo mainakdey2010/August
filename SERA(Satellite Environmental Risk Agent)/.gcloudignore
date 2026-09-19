@@ -13,3 +13,13 @@ __pycache__
 .pytest_cache
 node_modules
 .DS_Store
+
+
+# Do not upload local replay state or exported evidence with builds
+.sera-artifacts
+.sera-artifacts/**
+demo-validation
+demo-validation/**
+*.db
+*.sqlite
+**/node_modules/**

@@ -11,11 +11,15 @@
 
 - DOM smoke test passes: scenario selection, registration/submission, polling, map/table/report rendering, export links and safe text handling of untrusted asset labels. Uses jsdom and synthetic network responses; no screenshots.
 
+## GitHub CI
+
+[Run 35442768748](https://github.com/mainakdey2010/August/actions/runs/35442768748) passed on commit `91317bd5f0874caba12685cc478d6b46fade3b9a`: dependency installation, Python tests, shell validation, DOM smoke test and Docker image build.
+
 ## Not yet verified
 
 - ADC lookup returns `DefaultCredentialsError`: no authenticated GCP access is available in this authoring session.
 - No live Earth Engine pixels, Vertex model responses, Cloud SQL transactions, BigQuery archive writes, GCS previews or GCP deployments have been executed here.
-- No Docker executable is available locally. GitHub Actions and the supplied Cloud Build config provide container/build checks when run in those environments.
+- No Docker executable is available locally. The Docker image build passed in GitHub Actions; live container/cloud execution remains a separate gate.
 - Browser rendering was not validated locally: Playwright's Chromium download failed with HTTP 502. The UI JavaScript syntax is checked; this is not a visual QA pass.
 - Positive detection, scientific accuracy and model grounding remain unverified until actual output is retained and reviewed. The scenario locations are illustrative monitoring points.
 

@@ -75,7 +75,7 @@ def run_agent_chain(self, scan_id: str, region_id: str) -> dict[str, Any]:
         log.info("Stage risk_evaluation skipped (cached) scan=%s", scan_id)
 
     # ── Stage 3: Reporting ────────────────────────────────────────────────────
-    
+
     event_rows = _run_reporting(bq, scan_id, region_id, risk_output, anomaly_output)
 
     # ── Persist & notify ──────────────────────────────────────────────────────
